@@ -1,0 +1,10 @@
+{
+  "name": "S1-refspec-force-push-codex",
+  "runtime": "codex",
+  "guard": "bash",
+  "stdin": {
+    "tool_name": "Bash",
+    "tool_input": { "command": "git push origin +main" }
+  },
+  "expect_exit": 2
+}

@@ -1,9 +1,0 @@
-# holy-files.txt — protected source-of-truth files (one glob per line, relative to repo root).
-# Edits to these are blocked by holy-file-guard.sh unless ALLOW_HOLY_FILE_EDIT=1 is set.
-# Lines starting with # are comments. Copy this to .claude/holy-files.txt and adapt.
-
-docs/strategy.md
-docs/pricing.md
-docs/canon/*.md
-config/production.yaml
-infra/*.tf

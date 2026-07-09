@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|exec_command",
+        "hooks": [
+          { "type": "command", "command": ".codex/hooks/agent-guardrails-bash.sh" },
+          { "type": "command", "command": ".codex/hooks/agent-guardrails-secret.sh" }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|apply_patch",
+        "hooks": [
+          { "type": "command", "command": ".codex/hooks/agent-guardrails-secret.sh" },
+          { "type": "command", "command": ".codex/hooks/agent-guardrails-pii.sh" },
+          { "type": "command", "command": ".codex/hooks/agent-guardrails-protected.sh" }
+        ]
+      }
+    ]
+  }
+}

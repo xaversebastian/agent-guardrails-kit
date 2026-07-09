@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "policies": {
+    "destructive_shell": { "mode": "block" },
+    "secret_scan": {
+      "mode": "block",
+      "allowExampleExtensions": [".example", ".template"]
+    },
+    "pii": { "mode": "warn", "locale": "de-DE" },
+    "protected_files": {
+      "mode": "block",
+      "patterns": []
+    }
+  }
+}

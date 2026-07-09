@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "policies": {
+    "protected_files": {
+      "mode": "block",
+      "patterns": ["docs/strategy.md"]
+    }
+  }
+}

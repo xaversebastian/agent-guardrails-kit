@@ -1,0 +1,10 @@
+{
+  "name": "S1-refspec-force-push-windsurf",
+  "runtime": "windsurf",
+  "guard": "bash",
+  "stdin": {
+    "tool_name": "pre_run_command",
+    "tool_info": { "command_line": "git push origin +main" }
+  },
+  "expect_exit": 2
+}

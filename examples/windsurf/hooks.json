@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "pre_run_command": [
+      { "command": ".windsurf/hooks/agent-guardrails-bash.sh" },
+      { "command": ".windsurf/hooks/agent-guardrails-secret.sh" }
+    ],
+    "pre_write_code": [
+      { "command": ".windsurf/hooks/agent-guardrails-secret.sh" },
+      { "command": ".windsurf/hooks/agent-guardrails-pii.sh" },
+      { "command": ".windsurf/hooks/agent-guardrails-protected.sh" }
+    ]
+  }
+}

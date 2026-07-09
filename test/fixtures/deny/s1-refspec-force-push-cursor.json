@@ -1,0 +1,10 @@
+{
+  "name": "S1-refspec-force-push-cursor",
+  "runtime": "cursor",
+  "guard": "bash",
+  "stdin": {
+    "tool_name": "beforeShellExecution",
+    "command": "git push origin +main"
+  },
+  "expect_exit": 2
+}

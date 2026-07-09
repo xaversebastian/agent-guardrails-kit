@@ -1,0 +1,10 @@
+{
+  "name": "S3-find-delete",
+  "runtime": "claude",
+  "guard": "bash",
+  "stdin": {
+    "tool_name": "Bash",
+    "tool_input": { "command": "find /important -name '*.log' -delete" }
+  },
+  "expect_exit": 2
+}

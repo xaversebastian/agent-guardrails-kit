@@ -1,0 +1,10 @@
+{
+  "name": "harmless-bash",
+  "runtime": "claude",
+  "guard": "bash",
+  "stdin": {
+    "tool_name": "Bash",
+    "tool_input": { "command": "git status --short" }
+  },
+  "expect_exit": 0
+}

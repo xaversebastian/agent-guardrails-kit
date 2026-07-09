@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
-# Install the claude-guardrails hooks into a target repo by symlinking them
-# into <target>/.claude/hooks/. One source of truth, many repos: update this
-# clone and every linked repo gets the change.
-#
-# Usage:
-#   ./install.sh /path/to/your/repo
-#   ./install.sh /path/to/your/repo --copy   # copy instead of symlink
-
+# Install agent-guardrails-kit hooks into a target repo.
+# Usage: ./install.sh <target-repo> [--runtime claude|codex|cursor|windsurf|all] [--copy]
 set -euo pipefail
 
 TARGET="${1:-}"
-MODE="${2:-symlink}"
+RUNTIME="all"
+
+shift || true
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --runtime) RUNTIME="${2:-}"; shift 2 ;;
+    --copy) shift ;;
+    *) echo "unknown option: $1" >&2; exit 1 ;;
+  esac
+done
 
 if [ -z "$TARGET" ]; then
-  echo "usage: $0 <target-repo-dir> [--copy]" >&2
+  echo "usage: $0 <target-repo-dir> [--runtime claude|codex|cursor|windsurf|all] [--copy]" >&2
   exit 1
 fi
 if [ ! -d "$TARGET" ]; then
@@ -21,24 +24,53 @@ if [ ! -d "$TARGET" ]; then
   exit 1
 fi
 
-SOT="$(cd "$(dirname "$0")/hooks" && pwd)"
-DEST="$TARGET/.claude/hooks"
-mkdir -p "$DEST"
+KIT="$(cd "$(dirname "$0")" && pwd)"
+CLI="$KIT/cli/agent-guardrails"
+chmod +x "$CLI" "$KIT"/adapters/*/{hook.sh,parse.py} "$KIT"/core/*.sh 2>/dev/null || true
 
-for h in bash-guard.sh secret-scan.sh pii-warn.sh holy-file-guard.sh; do
-  if [ "$MODE" = "--copy" ]; then
-    cp "$SOT/$h" "$DEST/$h"
-    echo "copied  $h"
-  else
-    ln -sf "$SOT/$h" "$DEST/$h"
-    echo "linked  $h"
-  fi
-done
+install_hooks() {
+  local rt="$1"
+  local dest="$2"
+  local hook_src="$KIT/adapters/$rt/hook.sh"
+  mkdir -p "$dest"
+  for g in bash secret pii protected; do
+    local name="agent-guardrails-${g}.sh"
+    cat > "$dest/$name" <<WRAPPER
+#!/usr/bin/env bash
+export GUARDRAILS_GUARD=$g
+exec "$hook_src"
+WRAPPER
+    chmod +x "$dest/$name"
+  done
+  echo "installed $rt hooks -> $dest"
+}
+
+install_one() {
+  local rt="$1"
+  case "$rt" in
+    claude) install_hooks claude "$TARGET/.claude/hooks" ;;
+    codex) install_hooks codex "$TARGET/.codex/hooks" ;;
+    cursor) install_hooks cursor "$TARGET/.cursor/hooks" ;;
+    windsurf) install_hooks windsurf "$TARGET/.windsurf/hooks" ;;
+    *)
+      echo "unsupported runtime: $rt" >&2
+      exit 1
+      ;;
+  esac
+}
+
+if [ "$RUNTIME" = "all" ]; then
+  for rt in claude codex cursor windsurf; do
+    install_one "$rt"
+  done
+else
+  install_one "$RUNTIME"
+fi
 
 cat <<EOF
 
 Done. Next steps:
-  1. Merge examples/settings.json into $TARGET/.claude/settings.json
-  2. (optional) Copy examples/holy-files.txt to $TARGET/.claude/holy-files.txt and edit it
-  3. Start a Claude Code session in $TARGET — the guards are now active.
+  1. Merge examples/<runtime>/hooks.json into your repo hook config
+  2. (optional) Copy agent-guardrails.policy.json patterns into policy/default.policy.json
+  3. Start an agent session — guards are active via agent-guardrails CLI.
 EOF

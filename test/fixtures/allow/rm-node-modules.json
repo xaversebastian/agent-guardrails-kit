@@ -1,0 +1,10 @@
+{
+  "name": "rm-node-modules-safe",
+  "runtime": "claude",
+  "guard": "bash",
+  "stdin": {
+    "tool_name": "Bash",
+    "tool_input": { "command": "rm -rf ./node_modules" }
+  },
+  "expect_exit": 0
+}
