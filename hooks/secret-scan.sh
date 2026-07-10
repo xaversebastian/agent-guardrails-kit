@@ -41,9 +41,27 @@ if [ -z "$extracted" ]; then
   exit 0
 fi
 
-# Allow .env.example and templates that legitimately list variable names
+# Example/template files are still scanned. Only unmistakably fake assignment
+# values are removed before matching.
 case "$file_path" in
-  *.env.example|*/.env.example|*template*|*TEMPLATE*) exit 0 ;;
+  *.env.example|*template*|*TEMPLATE*)
+    extracted=$(printf '%s' "$extracted" | python3 -c '
+import re, sys
+
+placeholder = re.compile(
+    r"^(?:(?:CHANGE|REPLACE)(?:_?ME)?(?:_[A-Z0-9_]+)?|CHANGEME|REDACTED|"
+    r"TODO|EXAMPLE|PLACEHOLDER|YOUR_[A-Z0-9_]+|X{3,}|"
+    r"<[^>]+>|\$\{[^}]+\}|sk_test_x+|not-a-real-secret|from-keychain)$",
+    re.IGNORECASE,
+)
+
+for line in sys.stdin:
+    match = re.match(r"^\s*[A-Za-z_][A-Za-z0-9_]*\s*[:=]\s*([\"\x27]?)(.*?)\1\s*$", line.rstrip("\n"))
+    if match and placeholder.fullmatch(match.group(2)):
+        continue
+    sys.stdout.write(line)
+')
+    ;;
 esac
 
 block() {

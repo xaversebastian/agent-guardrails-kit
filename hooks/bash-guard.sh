@@ -56,14 +56,78 @@ if printf '%s' "$cmd" | grep -qE 'git[[:space:]]+branch[[:space:]]+-D'; then
   block "git branch -D force-deletes branches; ask first"
 fi
 
-# rm -rf without explicit safe paths
-if printf '%s' "$cmd" | grep -qE '(^|[[:space:];&|])rm[[:space:]]+(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r)'; then
-  # Allow common safe targets: ./node_modules, ./dist, ./.next, ./.astro, /tmp/*, ./.cache
-  if printf '%s' "$cmd" | grep -qE 'rm[[:space:]]+-[a-zA-Z]*[rf][a-zA-Z]*[[:space:]]+(\./?(node_modules|dist|build|\.next|\.astro|\.cache|\.tmp|\.turbo|coverage)|/tmp/|/var/folders/)'; then
-    : # safe, pass
-  else
-    block "rm -rf outside known safe paths (node_modules, dist, .next, .astro, .cache, .tmp, /tmp); ask first"
-  fi
+# rm -rf: every operand must be allowlisted. One safe operand must not approve
+# a mixed command that also removes an unrelated path.
+unsafe_rm_operand=$(python3 - "$cmd" <<'PY'
+import os
+import shlex
+import sys
+
+command = sys.argv[1]
+safe_roots = {
+    "node_modules", "dist", "build", ".next", ".astro", ".cache",
+    ".tmp", ".turbo", "coverage",
+}
+
+try:
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|")
+    lexer.whitespace_split = True
+    tokens = list(lexer)
+except ValueError:
+    print("<unparseable-command>")
+    raise SystemExit(0)
+
+def is_separator(token: str) -> bool:
+    return token and all(char in ";&|" for char in token)
+
+def is_safe(path: str) -> bool:
+    if path.startswith("/tmp/") or path.startswith("/var/folders/"):
+        return True
+    normalized = os.path.normpath(path)
+    if os.path.isabs(normalized) or normalized in {".", ".."}:
+        return False
+    return normalized.split(os.sep, 1)[0] in safe_roots
+
+index = 0
+while index < len(tokens):
+    if os.path.basename(tokens[index]) != "rm":
+        index += 1
+        continue
+
+    args = []
+    index += 1
+    while index < len(tokens) and not is_separator(tokens[index]):
+        args.append(tokens[index])
+        index += 1
+
+    recursive = False
+    force = False
+    operands = []
+    options_done = False
+    for arg in args:
+        if not options_done and arg == "--":
+            options_done = True
+            continue
+        if not options_done and arg.startswith("--"):
+            recursive = recursive or arg == "--recursive"
+            force = force or arg == "--force"
+            continue
+        if not options_done and arg.startswith("-") and arg != "-":
+            flags = arg[1:]
+            recursive = recursive or "r" in flags or "R" in flags
+            force = force or "f" in flags
+            continue
+        operands.append(arg)
+
+    if recursive and force:
+        for operand in operands:
+            if not is_safe(operand):
+                print(operand)
+                raise SystemExit(0)
+PY
+)
+if [ -n "$unsafe_rm_operand" ]; then
+  block "rm -rf has a non-allowlisted operand; every target must stay inside an approved build/cache directory or temporary path"
 fi
 
 # Direct .env deletion that often hides real intent

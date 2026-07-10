@@ -62,3 +62,12 @@ safety change:
 - **Rejected alternatives:** No `install.sh` run, no `~/.claude` writes, no
   target repo `.claude/` writes, no release/publish action, and no real
   secrets or PII fixtures.
+
+### 2026-07-10 · Codex · close destructive-command and template-secret bypasses
+
+- **Goal:** Validate every `rm -rf` operand and scan example/template files while allowing unmistakable placeholders.
+- **Changed paths:** `hooks/bash-guard.sh`, `hooks/secret-scan.sh`, `tests/hook-behavior-test.sh`, README and repo indexes.
+- **Checks run:** behavior and agent-surface tests PASS; ShellCheck, Bash syntax and `git diff --check` PASS.
+- **Risks/open:** Hooks remain best-effort and fail open only for malformed host payloads; no target installation or push.
+- **Unsafe assumptions:** Synthetic key shapes represent detection canaries, not credentials.
+- **Rejected alternatives:** No filename-wide secret allowlist and no single-safe-operand approval for mixed deletes.

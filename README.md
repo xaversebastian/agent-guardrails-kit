@@ -13,7 +13,7 @@ reads the tool-call JSON from stdin and exits `2` to deny a call (or `0` to allo
 | Hook | Fires on | What it does | Blocks? |
 |---|---|---|---|
 | `bash-guard.sh` | `Bash` | Blocks force-push to main/master/origin, `--no-verify`, `git reset --hard`, `git clean -f`, `git branch -D`, `rm -rf` outside safe paths (node_modules/dist/.next/…), `.env` deletion, and destructive SQL (`DROP`/`TRUNCATE`). | ✅ exit 2 |
-| `secret-scan.sh` | `Write` `Edit` `Bash` | Scans new content for high-confidence secrets: Stripe (`sk_live_`/`whsec_`), OpenAI/Anthropic (`sk-ant-`/`sk-proj-`), Supabase, GitHub (`ghp_`/`github_pat_`), AWS (`AKIA`), Google (`AIza`), Resend, Notion, private-key blocks, and known secret env-vars assigned real values. Allows `*.env.example` and templates. | ✅ exit 2 |
+| `secret-scan.sh` | `Write` `Edit` `Bash` | Scans new content for high-confidence secrets: Stripe (`sk_live_`/`whsec_`), OpenAI/Anthropic (`sk-ant-`/`sk-proj-`), Supabase, GitHub (`ghp_`/`github_pat_`), AWS (`AKIA`), Google (`AIza`), Resend, Notion, private-key blocks, and known secret env-vars assigned real values. Example/template files still block live-shaped values while allowing unmistakable placeholders. | ✅ exit 2 |
 | `pii-warn.sh` | `Write` `Edit` | Soft-warns (stderr, never blocks) on phone numbers, foreign email addresses, and street addresses. The agent sees the warning and decides what to do. Allowlists are configurable. | ⚠️ exit 0 |
 | `holy-file-guard.sh` | `Write` `Edit` | Blocks edits to files you mark as protected in `.claude/holy-files.txt` unless `ALLOW_HOLY_FILE_EDIT=1` is set. No config file → no-op. | ✅ exit 2 |
 

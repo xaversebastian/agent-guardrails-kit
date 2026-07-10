@@ -37,7 +37,8 @@ Run after substantive edits:
 
 ```bash
 tests/agent-surface-test.sh
-bash -n install.sh hooks/*.sh tests/agent-surface-test.sh
+tests/hook-behavior-test.sh
+bash -n install.sh hooks/*.sh tests/*.sh
 ```
 
 For hook behavior, use synthetic stdin JSON and temporary directories only.

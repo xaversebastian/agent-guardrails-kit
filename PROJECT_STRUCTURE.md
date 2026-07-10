@@ -32,13 +32,15 @@ maintainable without relying on Claude runtime state.
 │   ├── settings.json          # Example Claude Code hook wiring
 │   └── holy-files.txt         # Example protected-file glob list
 └── tests/
-    └── agent-surface-test.sh  # File-first agent surface regression test
+    ├── agent-surface-test.sh  # File-first agent surface regression test
+    └── hook-behavior-test.sh  # Synthetic allow/block regression tests
 ```
 
 ## Checks
 
 - `tests/agent-surface-test.sh`
-- `bash -n install.sh hooks/*.sh tests/agent-surface-test.sh`
+- `tests/hook-behavior-test.sh`
+- `bash -n install.sh hooks/*.sh tests/*.sh`
 - `hooks/bash-guard.sh`
 - Synthetic stdin JSON checks for hook allow/block behavior when hook behavior
   changes.
