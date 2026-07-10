@@ -12,15 +12,34 @@ file_path="${GR_FILE:-}"
 
 [ -z "$content" ] && exit 0
 
-# S4: Allowlist only by file extension .example or .template
+# Example/template files remain scanned. Strip only unmistakable placeholder
+# assignments so a live-shaped value cannot hide behind a filename suffix.
 case "$file_path" in
-  *.example|*.template) exit 0 ;;
+  *.example|*.template)
+    content=$(printf '%s' "$content" | python3 -c '
+import re, sys
+
+placeholder = re.compile(
+    r"^(?:(?:CHANGE|REPLACE)(?:_?ME)?(?:_[A-Z0-9_]+)?|CHANGEME|REDACTED|"
+    r"TODO|EXAMPLE|PLACEHOLDER|YOUR_[A-Z0-9_]+|X{3,}|"
+    r"<[^>]+>|\$\{[^}]+\}|sk_test_(?:x+|placeholder(?:_[a-z0-9_]+)?)|"
+    r"not-a-real-secret|from-keychain)$",
+    re.IGNORECASE,
+)
+
+for line in sys.stdin:
+    match = re.match(r"^\s*[A-Za-z_][A-Za-z0-9_]*\s*[:=]\s*([\"\x27]?)(.*?)\1\s*$", line.rstrip("\n"))
+    if match and placeholder.fullmatch(match.group(2)):
+        continue
+    sys.stdout.write(line)
+')
+    ;;
 esac
 
 block_secret() {
   local reason="$1"
   echo "File: $file_path" >&2
-  echo "If this is a deliberate placeholder, use .example or .template extension." >&2
+  echo "If this is deliberate example data, use an unmistakable placeholder such as REPLACE_ME." >&2
   gr_block "secret-scan" "$reason"
 }
 

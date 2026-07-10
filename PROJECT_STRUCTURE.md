@@ -38,6 +38,7 @@ Runtime-neutral guardrail hooks for Codex, Claude Code, Cursor, and Windsurf.
 │   └── threat-model.md
 ├── test/
 │   ├── run.sh                    # --runtime <name|all>
+│   ├── install-test.sh           # --copy self-containment regression
 │   └── fixtures/{deny,allow,warn}/
 └── .github/workflows/ci.yml
 ```

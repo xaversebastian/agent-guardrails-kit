@@ -21,6 +21,8 @@ No dependencies beyond `bash` and `python3` (stdlib only). Hooks read JSON from 
 git clone https://github.com/xaversebastian/agent-guardrails-kit.git
 cd agent-guardrails-kit
 ./install.sh /path/to/your/repo --runtime claude   # or codex, cursor, windsurf, all
+# Self-contained copy that does not depend on this checkout afterwards:
+./install.sh /path/to/your/repo --runtime codex --copy
 ```
 
 Merge the matching `examples/<runtime>/hooks.json` into your repo hook config.
@@ -71,6 +73,7 @@ Upgrading from `claude-guardrails`? See [MIGRATION.md](MIGRATION.md).
 
 ```bash
 ./test/run.sh --runtime all
+./test/install-test.sh
 ```
 
 ## License

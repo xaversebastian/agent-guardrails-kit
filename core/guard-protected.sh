@@ -45,6 +45,8 @@ esac
 
 while IFS= read -r pattern || [ -n "$pattern" ]; do
   [ -z "$pattern" ] && continue
+  # Patterns are policy-defined globs, not literal strings.
+  # shellcheck disable=SC2254
   case "$rel" in
     $pattern)
       if gr_is_override_allowed "protected-files"; then

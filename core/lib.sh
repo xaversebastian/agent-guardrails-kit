@@ -50,6 +50,8 @@ gr_is_safe_path() {
     case "$pattern" in
       ''|\#*) continue ;;
     esac
+    # Safe-path policy entries intentionally use shell globs.
+    # shellcheck disable=SC2254
     case "$target" in
       $pattern) return 0 ;;
     esac

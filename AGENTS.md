@@ -12,7 +12,7 @@ Tool-agnostic rules for maintaining this OSS repo.
 
 ```bash
 ./test/run.sh --runtime all
-bash -n install.sh cli/agent-guardrails core/*.sh test/run.sh
+bash -n install.sh cli/agent-guardrails core/*.sh test/*.sh
 ```
 
 ## Constraints
