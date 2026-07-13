@@ -16,7 +16,9 @@ Read order:
 ## Scope
 
 - Keep this repo dependency-light: bash hooks plus `python3`.
-- Codex is the default maintenance agent for bounded file changes.
+- Codex is the default maintenance agent for complete, clearly scoped,
+  reversible repo tasks including implementation, tests, atomic commits and
+  non-production pushes when assigned.
 - Claude-specific PreToolUse hooks are the product surface, not a required
   runtime for maintaining this repo.
 - Local LLMs must be able to recover context from files only:
