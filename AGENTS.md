@@ -26,6 +26,7 @@ bash -n install.sh cli/agent-guardrails core/*.sh test/*.sh
 
 - Atomic commits with clear messages
 - No `--no-verify`, no force-push to main
-- Append-only `AGENT_HANDOFF.md` for substantial changes
+- Append to `AGENT_HANDOFF.md` only for durable cross-session state, open
+  gates, or decisions that a later maintainer must inherit
 
 Codex is the default implementation surface; Claude/Cursor are review surfaces.
