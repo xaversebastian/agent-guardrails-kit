@@ -1,0 +1,10 @@
+{
+  "name": "rm-separate-flags-safe-path",
+  "runtime": "claude",
+  "guard": "bash",
+  "stdin": {
+    "tool_name": "Bash",
+    "tool_input": { "command": "rm -r -f ./dist" }
+  },
+  "expect_exit": 0
+}

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      { "command": ".cursor/hooks/agent-guardrails-bash.sh" },
+      { "command": ".cursor/hooks/agent-guardrails-secret.sh" }
+    ],
+    "preToolUse:Write": [
+      { "command": ".cursor/hooks/agent-guardrails-secret.sh", "failClosed": true },
+      { "command": ".cursor/hooks/agent-guardrails-pii.sh" },
+      { "command": ".cursor/hooks/agent-guardrails-protected.sh", "failClosed": true }
+    ]
+  }
+}

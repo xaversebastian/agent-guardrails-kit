@@ -1,0 +1,3 @@
+# docs/strategy.md
+docs/canon/*.md
+infra/*.tf

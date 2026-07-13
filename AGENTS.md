@@ -1,46 +1,32 @@
-# AGENTS.md - claude-guardrails
+# AGENTS.md — agent-guardrails-kit
 
-This repo is a small Claude Code guardrail-hook suite. It is an independent
-OSS/support-tool repo under `~/dev/oss/`.
+Tool-agnostic rules for maintaining this OSS repo.
 
-## Inheritance
+## Session start
 
-Read order:
-
-1. `/Users/xaverfreytag/dev/AGENTS.md`
-2. `/Users/xaverfreytag/dev/oss/AGENTS.md`
-3. This file
-4. `PROJECT_STRUCTURE.md`
-5. `AGENT_HANDOFF.md`
-
-## Scope
-
-- Keep this repo dependency-light: bash hooks plus `python3`.
-- Codex is the default maintenance agent for complete, clearly scoped,
-  reversible repo tasks including implementation, tests, atomic commits and
-  non-production pushes when assigned.
-- Claude-specific PreToolUse hooks are the product surface, not a required
-  runtime for maintaining this repo.
-- Local LLMs must be able to recover context from files only:
-  `AGENTS.md`, `PROJECT_STRUCTURE.md`, `AGENT_HANDOFF.md`, and `README.md`.
-
-## Safety
-
-- Do not run `install.sh` against another repo without explicit user approval.
-- Do not write to `~/.claude`, target repo `.claude/`, or user-level settings
-  during maintenance unless explicitly requested.
-- Do not read `.env*`, credentials, generated output, or `.git/` internals.
-- Test hook behavior with synthetic payloads only. Do not use real secrets or
-  real personal data as fixtures.
+1. Read `PROJECT_STRUCTURE.md`
+2. Read `AGENT_HANDOFF.md`
+3. Read `README.md`
 
 ## Checks
 
-Run after substantive edits:
-
 ```bash
-tests/agent-surface-test.sh
-tests/hook-behavior-test.sh
-bash -n install.sh hooks/*.sh tests/*.sh
+./test/run.sh --runtime all
+bash -n install.sh cli/agent-guardrails core/*.sh test/*.sh
 ```
 
-For hook behavior, use synthetic stdin JSON and temporary directories only.
+## Constraints
+
+- Core (`core/`) must stay free of `CLAUDE_*` and `.claude/` references
+- Bash + python3 stdlib only in core/adapters
+- No real secrets or PII in fixtures — synthetic tokens only
+- Do not run `install.sh` against user repos without explicit approval
+
+## Work style
+
+- Atomic commits with clear messages
+- No `--no-verify`, no force-push to main
+- Append to `AGENT_HANDOFF.md` only for durable cross-session state, open
+  gates, or decisions that a later maintainer must inherit
+
+Codex is the default implementation surface; Claude/Cursor are review surfaces.

@@ -1,0 +1,12 @@
+{
+  "name": "rm-mixed-safe-unsafe-targets",
+  "runtime": "claude",
+  "guard": "bash",
+  "stdin": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "rm -rf ./node_modules /Users/example/important"
+    }
+  },
+  "expect_exit": 2
+}

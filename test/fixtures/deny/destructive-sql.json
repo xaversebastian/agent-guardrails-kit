@@ -1,0 +1,10 @@
+{
+  "name": "destructive-sql",
+  "runtime": "claude",
+  "guard": "bash",
+  "stdin": {
+    "tool_name": "Bash",
+    "tool_input": { "command": "psql -c 'DROP TABLE users'" }
+  },
+  "expect_exit": 2
+}

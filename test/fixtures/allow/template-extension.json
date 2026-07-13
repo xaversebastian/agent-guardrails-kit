@@ -1,0 +1,13 @@
+{
+  "name": "template-extension-allow",
+  "runtime": "claude",
+  "guard": "secret",
+  "stdin": {
+    "tool_name": "Write",
+    "tool_input": {
+      "file_path": "/tmp/config.template",
+      "content": "STRIPE_SECRET_KEY=REPLACE_ME"
+    }
+  },
+  "expect_exit": 0
+}

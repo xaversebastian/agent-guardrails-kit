@@ -1,0 +1,13 @@
+{
+  "name": "pii-phone-warn",
+  "runtime": "claude",
+  "guard": "pii",
+  "stdin": {
+    "tool_name": "Write",
+    "tool_input": {
+      "file_path": "/tmp/notes.md",
+      "content": "Call +49 30 12345678 for details"
+    }
+  },
+  "expect_exit": 0
+}

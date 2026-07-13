@@ -1,0 +1,13 @@
+{
+  "name": "env-example-placeholder",
+  "runtime": "claude",
+  "guard": "secret",
+  "stdin": {
+    "tool_name": "Write",
+    "tool_input": {
+      "file_path": "/tmp/.env.example",
+      "content": "STRIPE_SECRET_KEY=sk_test_placeholder_value"
+    }
+  },
+  "expect_exit": 0
+}

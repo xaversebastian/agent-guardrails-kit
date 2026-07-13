@@ -1,78 +1,80 @@
-# claude-guardrails
+# Agent Guardrails Kit
 
-A small suite of [Claude Code](https://docs.claude.com/en/docs/claude-code) **PreToolUse hooks**
-that act as a safety net for agentic coding: block destructive shell commands, stop secrets and
-keys from being written to disk, warn about leaking personal data, and protect your
-source-of-truth files from accidental edits.
+Runtime-neutral **pre-execution safety hooks** for agentic coding: block destructive shell commands, stop live secrets from landing on disk, warn about PII, and protect source-of-truth files.
 
-No dependencies beyond `bash` and `python3` (already on macOS/Linux). No jq required. Each hook
-reads the tool-call JSON from stdin and exits `2` to deny a call (or `0` to allow / soft-warn).
+Works with **Claude Code**, **Codex**, **Cursor**, and **Windsurf** via thin adapters over a shared core.
 
-## The hooks
+No dependencies beyond `bash` and `python3` (stdlib only). Hooks read JSON from stdin and exit `2` to deny (or `0` to allow / soft-warn).
 
-| Hook | Fires on | What it does | Blocks? |
-|---|---|---|---|
-| `bash-guard.sh` | `Bash` | Blocks force-push to main/master/origin, `--no-verify`, `git reset --hard`, `git clean -f`, `git branch -D`, `rm -rf` outside safe paths (node_modules/dist/.next/…), `.env` deletion, and destructive SQL (`DROP`/`TRUNCATE`). | ✅ exit 2 |
-| `secret-scan.sh` | `Write` `Edit` `Bash` | Scans new content for high-confidence secrets: Stripe (`sk_live_`/`whsec_`), OpenAI/Anthropic (`sk-ant-`/`sk-proj-`), Supabase, GitHub (`ghp_`/`github_pat_`), AWS (`AKIA`), Google (`AIza`), Resend, Notion, private-key blocks, and known secret env-vars assigned real values. Example/template files still block live-shaped values while allowing unmistakable placeholders. | ✅ exit 2 |
-| `pii-warn.sh` | `Write` `Edit` | Soft-warns (stderr, never blocks) on phone numbers, foreign email addresses, and street addresses. The agent sees the warning and decides what to do. Allowlists are configurable. | ⚠️ exit 0 |
-| `holy-file-guard.sh` | `Write` `Edit` | Blocks edits to files you mark as protected in `.claude/holy-files.txt` unless `ALLOW_HOLY_FILE_EDIT=1` is set. No config file → no-op. | ✅ exit 2 |
+## Guards
 
-## Why
-
-When you let an agent run shell commands and write files, the failure modes are predictable:
-a `git push --force` to `main`, a real API key pasted into a committed file, a customer's phone
-number ending up in a public repo, or your carefully-versioned pricing/strategy doc silently
-rewritten. These hooks turn each of those into a hard stop (or a visible warning) at the moment
-the tool call is attempted — before anything lands on disk or in history.
+| Guard | Fires on | Mode |
+|---|---|---|
+| `bash-guard` | Shell commands | **block** |
+| `secret-scan` | Write / Edit / Patch content | **block** |
+| `pii-warn` | Write / Edit content | **warn** (never blocks) |
+| `protected-files` | Write / Edit to protected paths | **block** |
 
 ## Install
 
-Clone this repo once, then link the hooks into any repo you work in:
-
 ```bash
-git clone https://github.com/xaversebastian/claude-guardrails.git
-cd claude-guardrails
-./install.sh /path/to/your/repo          # symlinks hooks into <repo>/.claude/hooks/
-# or: ./install.sh /path/to/your/repo --copy
+git clone https://github.com/xaversebastian/agent-guardrails-kit.git
+cd agent-guardrails-kit
+./install.sh /path/to/your/repo --runtime claude   # or codex, cursor, windsurf, all
+# Self-contained copy that does not depend on this checkout afterwards:
+./install.sh /path/to/your/repo --runtime codex --copy
 ```
 
-The symlink mode is the point: keep one source of truth, and every repo you've linked picks up
-changes automatically. Then merge [`examples/settings.json`](examples/settings.json) into your
-repo's `.claude/settings.json` (it wires the matchers above).
+Merge the matching `examples/<runtime>/hooks.json` into your repo hook config.
 
-### Manual wiring
+### CLI (direct)
 
-If you prefer to wire it yourself, copy the hook files into `<repo>/.claude/hooks/`, `chmod +x`
-them, and add the `PreToolUse` block from [`examples/settings.json`](examples/settings.json).
+```bash
+echo '{"tool_name":"Bash","tool_input":{"command":"git status"}}' \
+  | ./cli/agent-guardrails --runtime claude --guard bash
+```
 
 ## Configuration
 
-**Protected files** (`holy-file-guard.sh`) — list globs (relative to repo root), one per line, in
-`.claude/holy-files.txt`. See [`examples/holy-files.txt`](examples/holy-files.txt). Override the
-location with `HOLY_FILES_CONFIG`. To make a deliberate edit, run that turn with
-`ALLOW_HOLY_FILE_EDIT=1`.
+**Project directory:** `GUARDRAILS_PROJECT_DIR` (falls back to `CLAUDE_PROJECT_DIR`, then `$PWD` in CLI layer).
 
-**PII allowlists** (`pii-warn.sh`) — comma-separated env vars, e.g. set inline in the hook command:
+**Protected files:** edit `policy/default.policy.json` → `protected_files.patterns`, or set `GUARDRAILS_PROTECTED_PATTERNS_FILE` to a glob list (one per line).
+
+**Overrides (scoped per call):**
+
+| Variable | Effect |
+|---|---|
+| `GUARDRAILS_ALLOW=protected-files` | Allow protected-file edit this call |
+| `ALLOW_HOLY_FILE_EDIT=1` | Legacy alias for above |
+| `GUARDRAILS_DISABLE=1` | Skip all guards (logged to stderr) |
+
+**PII allowlists:** `PII_ALLOW_EMAIL_DOMAINS`, `PII_ALLOW_PHONES`, `PII_ALLOW_ADDRESSES`
+
+## Architecture
 
 ```
-PII_ALLOW_EMAIL_DOMAINS="acme.com,acme.org"   # never warned
-PII_ALLOW_PHONES="+1 555 0100"                # literal substrings to ignore
-PII_ALLOW_ADDRESSES="Main Street 1"           # literal substrings to ignore
+core/           # Runtime-neutral guards (no CLAUDE_* references)
+policy/         # default.policy.json + safepaths.txt
+adapters/       # claude, codex, cursor, windsurf parsers + hook wrappers
+cli/            # agent-guardrails entrypoint
 ```
 
-Phone and address detection are tuned for German formats — adjust the regexes in `pii-warn.sh`
-for your locale.
+## Security disclaimer
 
-**Extending secret-scan** — the env-var watchlist near the bottom of `secret-scan.sh` is a plain
-alternation; add your own provider variables there.
+These hooks are a **best-effort safety net**, not a security boundary. They do not replace CI secret scanning, least-privilege tokens, or human approval for irreversible actions.
 
-## Notes
+See [docs/threat-model.md](docs/threat-model.md) for scope and runtime limits.
 
-- Hooks are best-effort guards, not a security boundary. `secret-scan.sh` catches high-confidence
-  *shapes*; it is not a replacement for a real secret scanner in CI or for `.gitignore` discipline.
-- `bash-guard.sh`'s force-push rule blocks the command outright — when you genuinely need it, run
-  it yourself outside the agent.
-- All hooks fail open on malformed input (exit 0), so a parsing edge case never wedges your session.
+## Migration
+
+Upgrading from `claude-guardrails`? See [MIGRATION.md](MIGRATION.md).
+
+## Tests
+
+```bash
+./test/run.sh --runtime all
+./test/install-test.sh
+```
 
 ## License
 

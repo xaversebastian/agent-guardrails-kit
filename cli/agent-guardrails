@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# agent-guardrails — runtime-neutral guardrail CLI.
+# Usage: agent-guardrails --runtime <claude|codex|cursor|windsurf> --guard <bash|secret|pii|protected|all>
+set -euo pipefail
+
+KIT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export GUARDRAILS_KIT_ROOT="$KIT_ROOT"
+
+RUNTIME=""
+GUARD=""
+FAIL_CLOSED=0
+
+usage() {
+  echo "usage: agent-guardrails --runtime <claude|codex|cursor|windsurf> --guard <bash|secret|pii|protected|all> [--fail-closed]" >&2
+  exit 1
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --runtime) RUNTIME="${2:-}"; shift 2 ;;
+    --guard) GUARD="${2:-}"; shift 2 ;;
+    --fail-closed) FAIL_CLOSED=1; shift ;;
+    -h|--help) usage ;;
+    *) echo "unknown arg: $1" >&2; usage ;;
+  esac
+done
+
+[ -z "$RUNTIME" ] || [ -z "$GUARD" ] && usage
+
+case "$RUNTIME" in
+  claude|codex|cursor|windsurf) ;;
+  *) echo "unsupported runtime: $RUNTIME" >&2; exit 1 ;;
+esac
+
+input=$(cat)
+[ -z "$input" ] && exit 0
+
+parse_script="$KIT_ROOT/adapters/$RUNTIME/parse.py"
+if [ ! -x "$parse_script" ]; then
+  chmod +x "$parse_script" 2>/dev/null || true
+fi
+
+normalized=$(printf '%s' "$input" | python3 "$parse_script" 2>/dev/null || true)
+if [ -z "$normalized" ]; then
+  if [ "$FAIL_CLOSED" -eq 1 ]; then
+    echo "BLOCKED by agent-guardrails: failed to parse stdin (fail-closed)" >&2
+    exit 2
+  fi
+  exit 0
+fi
+
+export GR_CMD GR_CONTENT GR_FILE GR_PROJECT_DIR GR_TOOL_NAME
+GR_CMD=$(printf '%s' "$normalized" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("command") or "")')
+GR_FILE=$(printf '%s' "$normalized" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("file_path") or "")')
+GR_PROJECT_DIR="${GUARDRAILS_PROJECT_DIR:-$(printf '%s' "$normalized" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("project_dir") or "")')}"
+GR_TOOL_NAME=$(printf '%s' "$normalized" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("tool_name") or "")')
+GR_CONTENT=$(printf '%s' "$normalized" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("\n".join(d.get("contents") or []))')
+
+# Legacy protected-files pattern file (Claude installs set this)
+if [ -z "${GUARDRAILS_PROTECTED_PATTERNS_FILE:-}" ]; then
+  legacy="${GUARDRAILS_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-$GR_PROJECT_DIR}}/.claude/holy-files.txt"
+  if [ -f "$legacy" ]; then
+    export GUARDRAILS_PROTECTED_PATTERNS_FILE="$legacy"
+  fi
+fi
+
+run_guard() {
+  local g="$1"
+  case "$g" in
+    bash) bash "$KIT_ROOT/core/guard-bash.sh" ;;
+    secret) bash "$KIT_ROOT/core/guard-secret.sh" ;;
+    pii) bash "$KIT_ROOT/core/guard-pii.sh" ;;
+    protected) bash "$KIT_ROOT/core/guard-protected.sh" ;;
+    *) echo "unknown guard: $g" >&2; exit 1 ;;
+  esac
+}
+
+is_write_tool() {
+  case "$GR_TOOL_NAME" in
+    Write|Edit|MultiEdit|apply_patch|WriteFile|EditFile|preToolUse:Write|pre_write_code) return 0 ;;
+    *Write*|*Edit*|*patch*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+is_bash_tool() {
+  case "$GR_TOOL_NAME" in
+    Bash|exec_command|beforeShellExecution|pre_run_command|Shell) return 0 ;;
+    *Bash*|*Shell*|*command*) return 0 ;;
+    *) [ -n "$GR_CMD" ] ;;
+  esac
+}
+
+if [ "$GUARD" = "all" ]; then
+  if is_bash_tool; then
+    run_guard bash
+    run_guard secret
+  fi
+  if is_write_tool; then
+    run_guard secret
+    run_guard pii
+    run_guard protected
+  fi
+  exit 0
+fi
+
+case "$GUARD" in
+  bash|secret|pii|protected) run_guard "$GUARD" ;;
+  *) usage ;;
+esac

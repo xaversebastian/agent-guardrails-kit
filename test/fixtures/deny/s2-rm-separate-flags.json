@@ -1,0 +1,10 @@
+{
+  "name": "S2-rm-separate-flags",
+  "runtime": "claude",
+  "guard": "bash",
+  "stdin": {
+    "tool_name": "Bash",
+    "tool_input": { "command": "rm -r -f /important/data" }
+  },
+  "expect_exit": 2
+}
